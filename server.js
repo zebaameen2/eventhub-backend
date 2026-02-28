@@ -36,7 +36,7 @@ app.use(express.json());
 
 // ===== Root Route =====
 app.get("/", (req, res) => {
-  res.json({ message: "Supabase backend running at http://localhost:5000" });
+  res.json({ message: `Supabase backend running at ${import.meta.env.VITE_BASE_URL}` });
 });
 
 // ===== Routes =====
@@ -122,7 +122,7 @@ app.post("/api/signup", async (req, res) => {
 });
 
 
-// ================= LOGIN =================
+
 // app.post("/api/login", async (req, res) => {
 //   try {
 //     const { email, password } = req.body;
@@ -157,7 +157,7 @@ app.post("/api/signup", async (req, res) => {
 //     res.status(500).json({ error: "Server error" });
 //   }
 // });
-
+// *********LOGIN ROUTE*******
 
 app.post("/api/login", async (req, res) => {
   try {
@@ -239,73 +239,6 @@ app.get("/api/events/:id", async (req, res) => {
 });
 
 
-// ================= REGISTER FOR EVENT =================
-// app.post("/api/events/:id/register", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { userId } = req.body;
-
-//     if (!userId) {
-//       return res.status(401).json({ error: "User not logged in" });
-//     }
-
-//     const { error } = await supabase
-//       .from("registrations")
-//       .insert([{ event_id: id, user_id: userId }]);
-
-//     if (error) {
-//       return res.status(500).json({ error: error.message });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Registered successfully",
-//     });
-
-//   } catch (err) {
-//     console.error("Register error:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
-
-// duplicate registration route left in server.js for historical reasons; the
-// real implementation now lives under Backend/routes/events.js.  Keeping this
-// commented out avoids accidental conflicts.
-// app.post("/api/events/:id/register", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { userId, name, email } = req.body; // 👈 frontend se name + email bhi bhejna hoga
-//
-//     if (!userId) {
-//       return res.status(401).json({ error: "User not logged in" });
-//     }
-//
-//     const { error } = await supabase
-//       .from("registrations")
-//       .insert([
-//         {
-//           event_id: id,
-//           user_id: userId,
-//           name,       // 👈 save attendee name
-//           email,      // 👈 save attendee email
-//           confirm: "pending", // default status
-//         },
-//       ]);
-//
-//     if (error) {
-//       return res.status(500).json({ error: error.message });
-//     }
-//
-//     res.json({
-//       success: true,
-//       message: "Registered successfully",
-//     });
-//
-//   } catch (err) {
-//     console.error("Register error:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-//});
 
 
 
@@ -318,5 +251,5 @@ app.get("/api/verify", authMiddleware, (req, res) => { res.json({ valid: true })
 
 // ================= START SERVER =================
 app.listen(PORT, () => {
-  console.log(`Supabase backend running at http://localhost:${PORT}`);
+  console.log(`Supabase backend running on PORT${PORT}`);
 });
