@@ -35,9 +35,11 @@ app.use(cors({
 app.use(express.json());
 
 // ===== Root Route =====
-app.get("/", (req, res) => {
-  res.json({ message: `Supabase backend running at ${import.meta.env.VITE_BASE_URL}` });
-});
+// app.get("/", (req, res) => {
+//   res.json({ message: `Supabase backend running at ${import.meta.env.VITE_BASE_URL}` });
+// });
+
+app.get("/", (req, res) => { res.json({ message: `Supabase backend running at ${process.env.VITE_BASE_URL}` }); });
 
 // ===== Routes =====
 app.use("/api/users", userRoutes);
