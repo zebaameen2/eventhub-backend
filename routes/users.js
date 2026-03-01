@@ -1,25 +1,3 @@
- // backend/routes/users.js
-
-
-// const express = require('express');
-// const supabase = require('../supabaseClient');
-// const router = express.Router();
-
-// // Example: get all users (for dashboard)
-// router.get('/', async (req, res) => {
-//   const { data, error } = await supabase
-//     .from('users')
-//  .select('id, firstname, lastname, email, created_at');
-
-//   if (error) return res.status(500).json({ error: error.message });
-
-//   res.json(data);
-// });
-
-// module.exports = router;
-
-
-
 // backend/routes/users.js
 const express = require("express");
 const supabase = require("../supabaseClient");
@@ -48,7 +26,7 @@ router.get("/", authMiddleware, async (req, res) => {
 ===================================================== */
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id; // 🔐 from JWT
+    const userId = req.user.id; //  from JWT
     const { data, error } = await supabase
       .from("users")
       .select("id, firstname, lastname, email, created_at")
