@@ -48,30 +48,47 @@ if (process.env.SMTP_HOST) {
   console.log("⚠️  SMTP not configured — using dev mode");
 }
 
+const EMAIL_API_URL = "https://send-grid-api.vercel.app/sendemail";
+
 async function sendMail(to, subject, text) {
-  if (!mailer) {
-    console.log("📝 DEV MAIL (not sent)", { to, subject, text });
-    return;
+  if (mailer) {
+    try {
+      const info = await mailer.sendMail({
+        from: process.env.SMTP_FROM,
+        to,
+        subject,
+        text,
+      });
+      console.log("✅ EMAIL SENT (SMTP):", { to, subject, messageId: info.messageId });
+      return;
+    } catch (err) {
+      console.error("❌ EMAIL SEND FAILED (SMTP):", { to, subject, error: err.message });
+      throw err;
+    }
   }
+  // Fallback: call external email API when SMTP not configured
   try {
-    const info = await mailer.sendMail({
-      from: process.env.SMTP_FROM,
-      to,
-      subject,
-      text,
+    const res = await fetch(EMAIL_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: to, subject, message: text }),
     });
-    console.log("✅ EMAIL SENT:", { to, subject, messageId: info.messageId });
+    if (res.ok) {
+      console.log("✅ EMAIL SENT (API):", { to, subject });
+    } else {
+      console.warn("⚠️ Email API returned", res.status, await res.text().catch(() => ""));
+    }
   } catch (err) {
-    console.error("❌ EMAIL SEND FAILED:", { to, subject, error: err.message });
-    throw err;
+    console.warn("⚠️ Email API fallback failed:", err.message);
+    // Don't throw - allow accept/reject to succeed even if email fails
   }
 }
 
-// Accept registration
-router.put("/:id/accept", authMiddleware, async (req, res) => {
+// Accept registration (PUT and GET so redirects or browser don't turn into "Cannot GET")
+const acceptHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("🔄 ACCEPT REQUEST for registration:", id);
+    console.log("🔄 ACCEPT REQUEST for registration:", id, "method:", req.method);
 
     // fetch registration + user + event for email
     const { data: reg, error: regErr } = await supabase
@@ -130,12 +147,16 @@ router.put("/:id/accept", authMiddleware, async (req, res) => {
     console.error("❌ ACCEPT ENDPOINT ERROR:", err.message || err);
     res.status(500).json({ success: false, error: err.message });
   }
-});
+};
 
-// Reject registration (DELETE from DB permanently)
-router.put("/:id/reject", authMiddleware, async (req, res) => {
+router.put("/:id/accept", authMiddleware, acceptHandler);
+router.get("/:id/accept", authMiddleware, acceptHandler);
+
+// Reject registration (PUT and GET; DELETE from DB permanently)
+const rejectHandler = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("🔄 REJECT REQUEST for registration:", id, "method:", req.method);
 
     const { data: reg, error: regErr } = await supabase
       .from("registrations")
@@ -156,13 +177,17 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
       .eq("id", reg.event_id)
       .maybeSingle();
 
-    // Send rejection email
+    // Send rejection email (wrap in try-catch so delete always runs)
     if (user?.email) {
-      await sendMail(
-        user.email,
-        `Update on ${event?.eventname || "your event"}`,
-        `Hello ${user.firstname || ""},\n\nUnfortunately your registration for ${event?.eventname || "the event"} was not accepted.\n\nThank you for your interest.`
-      );
+      try {
+        await sendMail(
+          user.email,
+          `Update on ${event?.eventname || "your event"}`,
+          `Hello ${user.firstname || ""},\n\nUnfortunately your registration for ${event?.eventname || "the event"} was not accepted.\n\nThank you for your interest.`
+        );
+      } catch (mailErr) {
+        console.warn("⚠️ Rejection email failed:", mailErr.message);
+      }
     }
 
     // PERMANENTLY DELETE the registration from database
@@ -177,7 +202,10 @@ router.put("/:id/reject", authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
-});
+};
+
+router.put("/:id/reject", authMiddleware, rejectHandler);
+router.get("/:id/reject", authMiddleware, rejectHandler);
 
 // delete registration (host only)
 router.delete("/:id", authMiddleware, async (req, res) => {

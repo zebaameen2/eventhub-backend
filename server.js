@@ -11,6 +11,14 @@ const authMiddleware = require("./middleware/authMiddleware");
 const userRoutes = require("./routes/users");
 const eventRoutes = require("./routes/events");
 const registrationsRoutes = require("./routes/registrations");
+const ticketTypesRoutes = require("./routes/ticketTypes");
+const sessionsRoutes = require("./routes/sessions");
+const speakersRoutes = require("./routes/speakers");
+const announcementsRoutes = require("./routes/announcements");
+const pollsRoutes = require("./routes/polls");
+const questionsRoutes = require("./routes/questions");
+const sessionChatRoutes = require("./routes/sessionChat");
+const sessionFeedbackRoutes = require("./routes/sessionFeedback");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +42,14 @@ app.get("/", (req, res) => { res.json({ message: `Supabase backend running at ${
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/registrations", registrationsRoutes);
+app.use("/api/events/:id/ticket-types", ticketTypesRoutes);
+app.use("/api/events/:id/sessions", sessionsRoutes);
+app.use("/api/events/:id/speakers", speakersRoutes);
+app.use("/api/events/:id/announcements", announcementsRoutes);
+app.use("/api/events/:id/polls", pollsRoutes);
+app.use("/api/events/:id/questions", questionsRoutes);
+app.use("/api/sessions/:sessionId/chat", sessionChatRoutes);
+app.use("/api/sessions/:sessionId", sessionFeedbackRoutes);
 
 // Dev/local email endpoint to avoid relying on external service during development.
 // Accepts { email, subject, message } and logs the payload. Returns 200.

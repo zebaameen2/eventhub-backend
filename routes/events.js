@@ -546,9 +546,9 @@ router.get("/:id/registrations", async (req, res) => {
 router.post("/:id/register", async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
+    const { userId, ticket_type_id } = req.body;
 
-    console.log("REGISTER route hit", { eventId: id, userId });
+    console.log("REGISTER route hit", { eventId: id, userId, ticket_type_id });
 
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
@@ -590,8 +590,25 @@ router.post("/:id/register", async (req, res) => {
       return res.status(400).json({ error: "You are already registered for this event" });
     }
 
+    // If ticket_type_id provided: validate and enforce quantity limit
+    if (ticket_type_id) {
+      const { data: ticketType, error: ttErr } = await supabase
+        .from("ticket_types")
+        .select("id, quantity_limit, sold_count")
+        .eq("id", ticket_type_id)
+        .eq("event_id", id)
+        .maybeSingle();
+      if (ttErr || !ticketType) {
+        return res.status(400).json({ error: "Invalid ticket type" });
+      }
+      if (ticketType.quantity_limit != null && (ticketType.sold_count || 0) >= ticketType.quantity_limit) {
+        return res.status(400).json({ error: "This ticket type is sold out" });
+      }
+    }
+
     // Insert registration (only include confirm column if it exists)
     const insertObj = { event_id: id, user_id: userId };
+    if (ticket_type_id) insertObj.ticket_type_id = ticket_type_id;
     if (await ensureConfirmColumn()) {
       insertObj.confirm = "pending";
     }
@@ -604,20 +621,31 @@ router.post("/:id/register", async (req, res) => {
 
     if (error) throw error;
 
+    // Increment sold_count for ticket type if present
+    if (ticket_type_id && data) {
+      const { data: tt } = await supabase.from("ticket_types").select("sold_count").eq("id", ticket_type_id).single();
+      const newSold = (tt?.sold_count ?? 0) + 1;
+      await supabase.from("ticket_types").update({ sold_count: newSold }).eq("id", ticket_type_id);
+    }
+
     res.json({ success: true, registration: data });
   } catch (err) {
     console.error("REGISTRATION ERROR:", err);
-    // if Supabase gives a human message include it in response
     const msg = err?.message || err?.error_description || "Registration failed";
-    // if it's the schema cache error remove confirm and retry one more time
     if (msg.includes("could not find the 'confirm'")) {
       try {
+        const insertObj = { event_id: id, user_id: userId };
+        if (ticket_type_id) insertObj.ticket_type_id = ticket_type_id;
         const { data, error } = await supabase
           .from("registrations")
-          .insert([{ event_id: id, user_id: userId }])
+          .insert([insertObj])
           .select()
           .single();
         if (!error) {
+          if (ticket_type_id) {
+            const { data: tt } = await supabase.from("ticket_types").select("sold_count").eq("id", ticket_type_id).single();
+            await supabase.from("ticket_types").update({ sold_count: (tt?.sold_count ?? 0) + 1 }).eq("id", ticket_type_id);
+          }
           return res.json({ success: true, registration: data });
         }
       } catch (_) {}
