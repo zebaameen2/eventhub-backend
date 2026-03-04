@@ -130,40 +130,7 @@ app.post("/api/signup", async (req, res) => {
 
 
 
-// app.post("/api/login", async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
 
-//     const { data: user, error } = await supabase
-//       .from("users")
-//       .select("*")
-//       .eq("email", email)
-//       .maybeSingle();
-
-//     if (error || !user) {
-//       return res.status(400).json({ error: "Invalid email or password" });
-//     }
-
-//     const isMatch = await bcrypt.compare(password, user.password_hash);
-//     if (!isMatch) {
-//       return res.status(400).json({ error: "Invalid email or password" });
-//     }
-
-//     res.status(200).json({
-//       message: "Login successful",
-//       user: {
-//         id: user.id,
-//         firstname: user.firstname,
-//         lastname: user.lastname,
-//         email: user.email,
-//       },
-//     });
-
-//   } catch (err) {
-//     console.error("Login error:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
 // *********LOGIN ROUTE*******
 
 app.post("/api/login", async (req, res) => {
